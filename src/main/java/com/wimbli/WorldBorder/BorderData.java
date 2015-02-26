@@ -279,20 +279,20 @@ public class BorderData
 		double originalY = yLoc;
 
 		yLoc = getSafeY(loc.getWorld(), ixLoc, Location.locToBlock(yLoc), izLoc, flying);
-		int searchArea = Config.getSearchArea();
 		if (yLoc == -1)
 		{
-			for (int cX = ixLoc - searchArea; cX <= ixLoc + searchArea; ++cX)
-			{
-				for (int cZ = izLoc - searchArea; cZ <= izLoc + searchArea; ++cZ)
-				{
+			int searchArea = Config.getSearchArea();
+			for (int cX = ixLoc - searchArea; cX <= ixLoc + searchArea; ++cX) {
+				for (int cZ = izLoc - searchArea; cZ <= izLoc + searchArea; ++cZ) {
 					if (cX == ixLoc && cZ == izLoc)
-						return null;
+						continue; // Skips the block that was already checked
+
+					if (insideBorder(new CoordXZ(cX, cZ)))
+						continue;
+
 					ixLoc = cX;
 					izLoc = cZ;
 
-					if (insideBorder(new CoordXZ(ixLoc, izLoc)))
-						continue;
 
 					// Make sure the chunk we're checking in is actually loaded
 					tChunk = loc.getWorld().getChunkAt(CoordXZ.blockToChunk(ixLoc), CoordXZ.blockToChunk(izLoc));
@@ -300,20 +300,27 @@ public class BorderData
 						tChunk.load();
 
 					yLoc = getSafeY(loc.getWorld(), ixLoc, Location.locToBlock(yLoc), izLoc, flying);
-					if (yLoc != -1)
+					if (yLoc != -1) {
+						xLoc = cX;
+						zLoc = cZ;
+						ixLoc = Location.locToBlock(xLoc);
+						izLoc = Location.locToBlock(zLoc);
 						break;
+					}
 				}
-				if (yLoc != -1)
-					break;
 			}
-			if (!Config.getFixTpTarget())
-			ixLoc = Location.locToBlock(xLoc);
-			izLoc = Location.locToBlock(zLoc);
 
-			loc.getWorld().getBlockAt(ixLoc, Location.locToBlock(originalY) - 1, izLoc).setType(Material.STONE);
-			loc.getWorld().getBlockAt(ixLoc, Location.locToBlock(originalY), izLoc).setType(Material.AIR);
-			loc.getWorld().getBlockAt(ixLoc, Location.locToBlock(originalY) + 1, izLoc).setType(Material.AIR);
-			return new Location(loc.getWorld(), Math.floor(xLoc) + 0.5, originalY, Math.floor(zLoc) + 0.5, loc.getYaw(), loc.getPitch());
+			if (yLoc == -1)
+			{
+				if (Config.getFixTpTarget()) {
+					loc.getWorld().getBlockAt(ixLoc, Location.locToBlock(originalY) - 1, izLoc).setType(Material.STONE);
+					loc.getWorld().getBlockAt(ixLoc, Location.locToBlock(originalY), izLoc).setType(Material.AIR);
+					loc.getWorld().getBlockAt(ixLoc, Location.locToBlock(originalY) + 1, izLoc).setType(Material.AIR);
+					return new Location(loc.getWorld(), Math.floor(xLoc) + 0.5, originalY, Math.floor(zLoc) + 0.5, loc.getYaw(), loc.getPitch());
+				}
+				return null;
+			}
+			return new Location(loc.getWorld(), Math.floor(xLoc) + 0.5, yLoc, Math.floor(zLoc) + 0.5, loc.getYaw(), loc.getPitch());
 		}
 
 		return new Location(loc.getWorld(), Math.floor(xLoc) + 0.5, yLoc, Math.floor(zLoc) + 0.5, loc.getYaw(), loc.getPitch());
